@@ -1,7 +1,7 @@
 ---
 title: eth_getAddressAppearances JSON-RPC method
 description: An Ethereum JSON-RPC endpoint for getting all EVM appearances of an address
-author: Perama (@perama-v)
+author: Perama (perama-v)
 discussions-to: -
 status: Draft
 type: Standards
