@@ -4,6 +4,23 @@ An Ethereum JSON-RPC endpoint specification for getting all EVM appearances of a
 See the WIP draft specification here [EIP-XXXX.md](EIP-XXXX.md). This is not a formal proposal,
 if a proposal is made (as an EIP, a note will be left here including a link to the actual
 proposal).
+## TL;DR
+
+New archive node endpoint
+
+eth_getAddressAppearances(my_wallet) that returns
+- transaction x in block p
+- transaction y in block q
+- transaction z in block r
+
+Then those transactions can be traced to get everything that transaction did to/from your wallet,
+not just the subset of things that appear in transfers/events.
+
+The endpoint could usher in a renaissance of apps that don't need infrastructure providers,
+just either:
+- Your archive node
+- Your portal node (a sharded archive node, in R&D/WIP/alpha)
+
 ## Specification
 
 See the [eth_getAddressAppearances JSON-RPC method](EIP-XXXX.md) specification.
@@ -162,4 +179,4 @@ be added to the Portal Network to distribute the index data natively.
 
 The result would be a quick-to-start, low resource node that could show the complete history
 of the transactions important for an end user. This can even include trustless sharded archive
-node that does not require tracing, as shown in the prototype [archors](https://github.com/perama-v/archors), which creates a state proof bundle for every historical block. 
+node that does not require tracing, as shown in the prototype [archors](https://github.com/perama-v/archors), which creates a state proof bundle for every historical block.
