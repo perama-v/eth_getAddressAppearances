@@ -1,9 +1,26 @@
 # eth_getAddressAppearances
+
 An Ethereum JSON-RPC endpoint specification for getting all EVM appearances of an address
 
 See the WIP draft specification here [EIP-XXXX.md](EIP-XXXX.md). This is not a formal proposal,
 if a proposal is made (as an EIP, a note will be left here including a link to the actual
 proposal).
+
+## Table of Contents
+- [eth_getAddressAppearances](#eth_getaddressappearances)
+  - [Table of Contents](#table-of-contents)
+  - [TL;DR](#tldr)
+  - [Specification](#specification)
+  - [Endpoint vs custom javascript tracer](#endpoint-vs-custom-javascript-tracer)
+  - [TrueBlocks ecosystem](#trueblocks-ecosystem)
+  - [`chifra list <address>` vs `eth_getAddressAppearances`](#chifra-list-address-vs-eth_getaddressappearances)
+  - [The role of the JSON-RPC](#the-role-of-the-json-rpc)
+  - [Future of trueblocks-core](#future-of-trueblocks-core)
+  - [Intermediate measures](#intermediate-measures)
+  - [Just use custom javascript tracers / external data sources](#just-use-custom-javascript-tracers--external-data-sources)
+  - [Sharded archive node](#sharded-archive-node)
+
+
 ## TL;DR
 
 New archive node endpoint
@@ -127,9 +144,9 @@ to other data sources.
 ## Future of trueblocks-core
 
 If nodes provided `eth_getAddressAppearances`, trueblocks could call that endpoint when needed,
-and `chifra <command>` would under the hood use that endpoint.
+and `chifra <command>` would under the hood use that endpoint rather than look up
+the local/IPFS UnchainedIndex
 ```sh
-# Calls node rather than looks up UnchainedIndex
 chifra list <address>
 ```
 Importantly, other local decentralised applications could also call `eth_getAddressAppearances`.
