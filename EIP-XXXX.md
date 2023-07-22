@@ -124,16 +124,16 @@ scenarios:
 An address appearance is defined as having the following components:
 - Block number (hex number e.g., "0x5", "0x53f)
     - MUST be included for any appearance
-- Transaction index (optional)
+- Transaction indices
     - MUST be included for any intra-transaction appearance.
-    - MUST be omitted if an extra-transaction appearance occurs but an intra-transaction does not occur.
+    - MUST be omitted (empty list) if an extra-transaction appearance occurs but an intra-transaction does not occur.
 
 ### `appearance` type
 The `appearance` type is:
 |Name|Required|Type|Example|Explanation|
 |-|-|-|-|-|
 |`blockNumber`|true|Hex-number|"0x2", "0x123abc" |The block number. An unsigned 64-bit integer as a Hex-number|
-|`transactionIndices`|false|List of Hex-number|["0x2","2e"]|A list transactions indices for the given block, ordered from earliest to latest|
+|`transactionIndices`|true|List of Hex-number|["0x2","2e"]|A list transactions indices for the given block, ordered from earliest to latest|
 
 ### eth_getAddressAppearances method
 
