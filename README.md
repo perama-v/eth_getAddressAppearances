@@ -311,3 +311,59 @@ around the same time.
 
 Without `eth_getAddressAppearances`, the local program is unable to show why the users balance
 is suddenly higher.
+
+### Node implementation
+
+A node may implement `eth_getAddressAppearances` differently according to its architecture.
+For example, for each address encountered when running the execution phase of the chain
+sync, it may store some compressed map for every appearance
+(pair of block number and transaction index).
+
+### Why not eth_addressesPerBlock?
+It returns too much extraneous data and places too much emphasis on the block, rather than
+the user/application address.
+
+Consider a method `eth_addressesPerBlock` that accepts a block number and returns
+the addresses that appear in that block.
+
+Consider an application with a contract deployed (let's use the deposit contract application example
+again `0x0000...05Fa`). A program talks to the node to find tranasctions that involve the contract.
+```
+query: eth_addressesPerBlock(block_number)
+returns: [address_1, address_2, 0x0000...05Fa, address_3, ...]
+```
+
+This is a binary result (the application was invovled somewhere in the block) and now every
+transaction must be interrogated.
+
+Alternatively, the transaction index could also be returned:
+
+```
+query: eth_addressesPerBlock(block_number)
+returns: [(address_1, index_a), (address_2, index_b), (0x0000...05Fa, index_c), (address_3, index_d), ...]
+```
+Now it is clear that transaction with index_c must be examined to get useful information to display.
+
+This is a lot of information that is very clearly the is not useful to the program creating the
+interface for the user. Many addresses are completely irrelevant (there will often be many
+addresses appear per transaction, and can be ~50-200 transactions per block).
+
+As transaction with index_c can be re-executed, this re-execution will reveal addresses that
+have interacted with the contract (e.g., making a deposit). Some applications have multiple
+addresses all in one (such as multi-sends to different participants). The transaction trace
+contains all this information.
+
+So even though the method returns the addresses of users who interacted with the contract in
+transaction index_c, their discovery actually comes from inspecting that contract. There
+will be opcodes (e.g., CALL) whose subjects are the addresses that are the users of that protocol.
+
+Queries for user-centric applications start with the premise: we are interested in activity related
+to the address of the user/contract.
+
+It is therefore not fruitful to start by looking for all addresses that appear in a block.
+It is mostly extraneous or redundant work. For a full explorer that seeks to display everything
+that happened in a block, one must re-execute the block and parse the opcodes to find meaning.
+
+This is also made clear when considering past blocks. A user likely does not know which block
+they should be interested in, but eth_addressesPerBlock either requires this knowledge,
+and so implies it should be called for all blocks.
