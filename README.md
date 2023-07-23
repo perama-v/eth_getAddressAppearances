@@ -363,7 +363,22 @@ to the address of the user/contract.
 It is therefore not fruitful to start by looking for all addresses that appear in a block.
 It is mostly extraneous or redundant work. For a full explorer that seeks to display everything
 that happened in a block, one must re-execute the block and parse the opcodes to find meaning.
+For example, batch ether transfers using the CALL opcode to dozens of EOAs in a single transaction.
+Tracing the transaction is likely the only way to correctly gain meaning from such a transaction,
+and so the eth_addressesPerBlock method is redundant (the addresses are present on the stack
+in the trace for each CALL).
 
-This is also made clear when considering past blocks. A user likely does not know which block
-they should be interested in, but eth_addressesPerBlock either requires this knowledge,
-and so implies it should be called for all blocks.
+The low utility for a user is also made clear when considering past blocks.
+A user likely does not know which block they should be interested in, but eth_addressesPerBlock
+either requires this knowledge, and so implies it should be called for all blocks.
+
+In other words, applications can be described as having one of three patterns:
+- General user wallet display
+    - One call: Here is my address, show me where to go next (which tx to trace)
+- General application display
+    - One call: Here is the contract address, show me where to go next
+- Single user, single application display
+    - Two calls
+        - Here is my address
+        - Here is the application contract address (or addresses)
+    - The intersection of the two results is where to go next
