@@ -197,3 +197,117 @@ be added to the Portal Network to distribute the index data natively.
 The result would be a quick-to-start, low resource node that could show the complete history
 of the transactions important for an end user. This can even include trustless sharded archive
 node that does not require tracing, as shown in the prototype [archors](https://github.com/perama-v/archors), which creates a state proof bundle for every historical block.
+
+## Example application
+
+A local frontend for a deployed contract. The goal is a local frontend that shows live updates,
+as well as historical updates.
+
+This could be any deployed protocol, but for now we will use the Ethereum deposit, contract at an address: `0x00000000219ab540356cBB839Cbe05303d7705Fa`.
+
+Someone has written a program that acts as an interface for a user.
+The user has a node accessible over port 8545.
+The program can call methods on that node, including `eth_getBlockByNumber` and, in this
+scenario, the new `eth_getAddressAppearances`.
+
+The program periodically asks for the latest block to know where the chain head is up to.
+Suppose the last query was for block `0x1036000`, and the chain has progressed 3 blocks `0x1036003`.
+
+As new blocks are produced, if the contract appears in a transaction, the interface would like
+to know the details of what happened.
+
+The deployed contract emits events for successful deposits, these are easily tracked in transaction
+logs. However other interactions with the contract are possible, including deposits that fail
+due to running out of gas. To see these, the transaction must be re-executed and examined.
+
+The program calls
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "eth_getAddressAppearances",
+    "params": [
+        "address": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+        "range": ["0x1036001", "0x1036003"]
+        ],
+    "id": 0
+}
+```
+The response is (made up for this example):
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "appearances": [
+        {"blockNumber": "0x1036001", "transactionIndices": ["0x0", "0x2c"]},
+        {"blockNumber": "0x1036002", "transactionIndices": ["0x3"]},
+        {"blockNumber": "0x1036003", "transactionIndices": ["0x11"]},
+    ],
+  }
+}
+```
+The program knows that 4 transactions involved the deposit contract somehow.
+First the program fetches the transaction receipts, and if they appear normal, no
+further work is required, the events can be parsed and the user interface updated.
+
+Suppose transaction "0x3" in block "0x1036002" has no events logged. Now the application
+calls to re-execute and examine the transaction using its hash "0xcdef...8765".
+
+```
+{
+    "jsonrpc": "2.0",
+    "method": "eth_debugTraceTransaction",
+    "params": ["0xcdef...8765"],
+    "id": 0
+}
+```
+The trace returned is parsed and it is discovered that the transaction was reverted.
+
+The display can now be updated, showing the user the 3 successful deposits and the 1 failed
+deposit.
+
+The user now clicks on a tab in the application called "my transactions". The program
+finds the address from the connected wallet "0xbcde...5555". Then it calls:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "eth_getAddressAppearances",
+    "params": [
+        "address": "0xbcde...5555",
+        "range": []
+        ],
+    "id": 0
+}
+```
+This returns the list of all transactions relevant to the user. The program finds the
+intersection of the two lists (user address and deposit contract). Those transactions
+can now be fetched and examined closely.
+
+This pattern applies to all applications: the intersection of a
+- eth_getAddressAppearances for protocol address
+- eth_getAddressAppearances for user address
+
+Represents interesting transactions that can be fetched, re-executed and displayed.
+
+### Wallet receives from exchange batch-send
+
+A user has a local node and a wallet interface to explore their history. As above,
+the program running the display calls a local node. It can query historical transactions,
+as well as periodically calling for pertinent transactions at the chain tip.
+
+The program calls the node and finds a list of tranactions. They are fetched and examined for logged
+events. One is found that does not have logged events.
+
+It is re-executed using debug_traceTransaction which reveals a CALL from an account to the
+users address. As the user account has no code, the result is a transfer of ether to the user.
+
+The frontend displays this transfer, which otherwise is opaque.
+
+This scenario applies to a common pattern, which is a cost saving measure to send ether to
+multiple addresses at once. E.g,. from a centralized exchange to multiple users withdrawing
+around the same time.
+
+Without `eth_getAddressAppearances`, the local program is unable to show why the users balance
+is suddenly higher.
