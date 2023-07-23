@@ -7,19 +7,26 @@ if a proposal is made (as an EIP, a note will be left here including a link to t
 proposal).
 
 ## Table of Contents
+
 - [eth_getAddressAppearances](#eth_getaddressappearances)
   - [Table of Contents](#table-of-contents)
   - [TL;DR](#tldr)
   - [Specification](#specification)
   - [Endpoint vs custom javascript tracer](#endpoint-vs-custom-javascript-tracer)
   - [TrueBlocks ecosystem](#trueblocks-ecosystem)
-  - [`chifra list <address>` vs `eth_getAddressAppearances`](#chifra-list-address-vs-eth_getaddressappearances)
+    - [Inventory of components](#inventory-of-components)
+    - [Comparison of `chifra list <address>` vs `eth_getAddressAppearances`](#comparison-of-chifra-list-address-vs-eth_getaddressappearances)
+    - [Future of trueblocks-core](#future-of-trueblocks-core)
+    - [Intermediate measures](#intermediate-measures)
   - [The role of the JSON-RPC](#the-role-of-the-json-rpc)
-  - [Future of trueblocks-core](#future-of-trueblocks-core)
-  - [Intermediate measures](#intermediate-measures)
   - [Just use custom javascript tracers / external data sources](#just-use-custom-javascript-tracers--external-data-sources)
   - [Sharded archive node](#sharded-archive-node)
-
+  - [Example applications](#example-applications)
+    - [Deposit contract display](#deposit-contract-display)
+    - [Wallet receives from exchange batch-send](#wallet-receives-from-exchange-batch-send)
+  - [Alternative or symbiotic designs](#alternative-or-symbiotic-designs)
+    - [Note on implementation details](#note-on-implementation-details)
+    - [Why not eth_addressesPerBlock?](#why-not-eth_addressesperblock)
 
 ## TL;DR
 
@@ -52,6 +59,11 @@ This supports that index is worth creating a dedicated endpoint for (`eth_getAdd
 
 ## TrueBlocks ecosystem
 
+TrueBlocks is the inspiration for this concept. One might view this `eth_getAddressAppearances`
+method as an attempt to fold some of the functionality found in trueblocks-core/UnchainedIndex ([https://github.com/TrueBlocks/trueblocks-core](https://github.com/TrueBlocks/trueblocks-core))
+into the node where it seems to really belong.
+
+### Inventory of components
 Some notes on the components of the TrueBlocks ecosystem which is centered on the provision and
 use of the address appearances.
 
@@ -79,7 +91,7 @@ So there is
 - software that uses the index via CLI (`chifra <command>`)
 - software for graphical exploration
 
-## `chifra list <address>` vs `eth_getAddressAppearances`
+### Comparison of `chifra list <address>` vs `eth_getAddressAppearances`
 Some notes on the components of the TrueBlocks ecosystem and how they relate to this `eth_getAddressAppearances` endpoint
 
 Compare the following hypothetical queries (fabricated data, looking for transactions involving the
@@ -117,6 +129,31 @@ The `eth_getAddressAppearances` is designed to produce the same data. Another
 mental model is that the UnchainedIndex was
 invented because the `eth_getAddressAppearances` didn't exist.
 
+
+### Future of trueblocks-core
+
+If nodes provided `eth_getAddressAppearances`, trueblocks could call that endpoint when needed,
+and `chifra <command>` would under the hood use that endpoint rather than look up
+the local/IPFS UnchainedIndex
+```sh
+chifra list <address>
+```
+Importantly, other local decentralised applications could also call `eth_getAddressAppearances`.
+
+### Intermediate measures
+
+As nodes do not support `eth_getAddressAppearances`, one could implement a phased approach as
+follows:
+
+1. Modify trueblocks-core too respond to requests to `eth_getAddressAppearances`
+2. Modify an execution client too respond to `eth_getAddressAppearances` requests, but
+just have them redirect to trueblocks-core (and hence use UnchainedIndex)
+3. Experiment and evaluate. Do users find the endpoint useful?
+4. Modify the `eth_getAddressAppearances` as desired
+5. Implement `eth_getAddressAppearances` natively in the client (no reliance on UnchainedIndex)
+6. Implement in other clients
+
+
 ## The role of the JSON-RPC
 
 When getting information from a local node, one makes all queries to the same place:
@@ -140,29 +177,6 @@ same endpoint again, diving into the transactions returned:
 
 Without the `eth_getAddressAppearances` endpoint, one cannot use the node without first referring
 to other data sources.
-
-## Future of trueblocks-core
-
-If nodes provided `eth_getAddressAppearances`, trueblocks could call that endpoint when needed,
-and `chifra <command>` would under the hood use that endpoint rather than look up
-the local/IPFS UnchainedIndex
-```sh
-chifra list <address>
-```
-Importantly, other local decentralised applications could also call `eth_getAddressAppearances`.
-
-## Intermediate measures
-
-As nodes do not support `eth_getAddressAppearances`, one could implement a phased approach as
-follows:
-
-1. Modify trueblocks-core too respond to requests to `eth_getAddressAppearances`
-2. Modify an execution client too respond to `eth_getAddressAppearances` requests, but
-just have them redirect to trueblocks-core (and hence use UnchainedIndex)
-3. Experiment and evaluate. Do users find the endpoint useful?
-4. Modify the `eth_getAddressAppearances` as desired
-5. Implement `eth_getAddressAppearances` natively in the client (no reliance on UnchainedIndex)
-6. Implement in other clients
 
 ## Just use custom javascript tracers / external data sources
 
@@ -198,7 +212,9 @@ The result would be a quick-to-start, low resource node that could show the comp
 of the transactions important for an end user. This can even include trustless sharded archive
 node that does not require tracing, as shown in the prototype [archors](https://github.com/perama-v/archors), which creates a state proof bundle for every historical block.
 
-## Example application
+## Example applications
+
+### Deposit contract display
 
 A local frontend for a deployed contract. The goal is a local frontend that shows live updates,
 as well as historical updates.
@@ -312,12 +328,19 @@ around the same time.
 Without `eth_getAddressAppearances`, the local program is unable to show why the users balance
 is suddenly higher.
 
-### Node implementation
+## Alternative or symbiotic designs
+
+### Note on implementation details
 
 A node may implement `eth_getAddressAppearances` differently according to its architecture.
 For example, for each address encountered when running the execution phase of the chain
 sync, it may store some compressed map for every appearance
 (pair of block number and transaction index).
+
+It may be tempting to provide halfway endpoints that help implementations roll out in phases,
+this may be counterproductive. An intermediate phase endpoint may imply different representations
+in different clients. It seems wiser to decide: is `eth_getAddressAppearances` worth
+implementing, or not?
 
 ### Why not eth_addressesPerBlock?
 It returns too much extraneous data and places too much emphasis on the block, rather than
@@ -382,3 +405,6 @@ In other words, applications can be described as having one of three patterns:
         - Here is my address
         - Here is the application contract address (or addresses)
     - The intersection of the two results is where to go next
+
+`eth_getAddressAppearances` satisfies all these patterns efficiently, and includes the provision
+to limit queries to a range of blocks.
